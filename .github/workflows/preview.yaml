@@ -1,0 +1,38 @@
+name: Expo CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏗 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm' # or 'yarn' / 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🧪 Run Code Validation (CI)
+        run: |
+          npm run lint
+          npm run test -- --watchAll=false
+
+      - name: 🚀 Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📱 Submit EAS Update (CD)
+        if: github.event_name == 'push'
+        run: eas update --auto --branch=${{ github.ref_name }}
